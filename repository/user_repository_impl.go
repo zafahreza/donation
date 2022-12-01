@@ -53,7 +53,7 @@ func (UserRepository *UserRepositoryImpl) FindByEmail(tx *gorm.DB, userEmail str
 
 func (UserRepository *UserRepositoryImpl) FindAll(tx *gorm.DB) []domain.User {
 	users := []domain.User{}
-	err := tx.Find(&users).Error
+	err := tx.Order("id asc").Find(&users).Order("id desc").Error
 	helper.PanicIfError(err)
 
 	return users
