@@ -1,6 +1,8 @@
 package domain
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
 	Id           int
@@ -8,6 +10,7 @@ type User struct {
 	LastName     string
 	Email        string
 	PasswordHash string
+	Bio          string
 	ImageUrl     string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time

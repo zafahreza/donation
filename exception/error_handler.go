@@ -18,6 +18,9 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err interface{}) {
 	if emailUsedError(w, r, err) {
 		return
 	}
+	if wrongPasswordError(w, r, err) {
+		return
+	}
 
 	internalServerError(w, r, err)
 }
@@ -76,6 +79,25 @@ func validationEror(w http.ResponseWriter, r *http.Request, err interface{}) boo
 
 func emailUsedError(w http.ResponseWriter, r *http.Request, err interface{}) bool {
 	exception, ok := err.(EmailUsedError)
+	if ok {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+
+		webResponse := client.UserAPIResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   exception.Error,
+		}
+
+		helper.WriteToResponseBody(w, webResponse)
+		return true
+	}
+
+	return false
+}
+
+func wrongPasswordError(w http.ResponseWriter, r *http.Request, err interface{}) bool {
+	exception, ok := err.(WrongPasswordError)
 	if ok {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)

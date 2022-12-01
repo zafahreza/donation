@@ -5,4 +5,5 @@ type UserCreateRequest struct {
 	LastName  string `validate:"required" json:"last_name"`
 	Password  string `validate:"required" json:"password"`
 	Email     string `validate:"required,email" json:"email"`
+	Bio       string `json:"bio"`
 }

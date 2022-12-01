@@ -11,6 +11,7 @@ func ToUserResponse(user domain.User) client.UserResponse {
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		Email:     user.Email,
+		Bio:       user.Bio,
 		UpdatedAt: user.UpdatedAt,
 	}
 }

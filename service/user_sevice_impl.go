@@ -7,6 +7,7 @@ import (
 	"donation/exception"
 	"donation/helper.go"
 	"donation/repository"
+	"errors"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -48,6 +49,7 @@ func (service UserServiceImpl) Create(ctx context.Context, request client.UserCr
 		FirstName:    request.FirstName,
 		LastName:     request.LastName,
 		Email:        goodEmail,
+		Bio:          request.Bio,
 		PasswordHash: string(passwordHash),
 	}
 
@@ -78,6 +80,7 @@ func (service UserServiceImpl) Update(ctx context.Context, request client.UserUp
 	user.FirstName = request.FirstName
 	user.LastName = request.LastName
 	user.Email = goodEmail
+	user.Bio = request.Bio
 
 	updatedUser := service.UserRepository.Update(ctx, tx, user)
 
@@ -107,7 +110,9 @@ func (service UserServiceImpl) Session(ctx context.Context, request client.UserS
 	exception.PanicIfNotFound(user.Id)
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password))
-	helper.PanicIfError(err)
+	if err != nil {
+		panic(exception.NewWrongPasswordError(errors.New("wrong password")))
+	}
 
 	return helper.ToUserResponse(user)
 }
