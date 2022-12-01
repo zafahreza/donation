@@ -1,6 +1,6 @@
 package client
 
 type UserSessionRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `validate:"required,email" json:"email"`
+	Password string `validate:"required" json:"password"`
 }

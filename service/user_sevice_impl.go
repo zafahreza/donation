@@ -3,9 +3,10 @@ package service
 import (
 	"donation/entity/client"
 	"donation/entity/domain"
+	"donation/exception"
 	"donation/helper.go"
 	"donation/repository"
-	"errors"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -34,20 +35,18 @@ func (service UserServiceImpl) Create(request client.UserCreateRequest) client.U
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	notFound := errors.New("user not found")
 	userEmail, err := service.UserRepository.FindByEmail(tx, request.Email)
 	helper.PanicIfError(err)
-	if userEmail.Email == request.Email {
-		helper.PanicIfError(notFound)
-	}
+	exception.PanicIfEmailUsed(request.Email, userEmail.Email)
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.MinCost)
 	helper.PanicIfError(err)
 
+	goodEmail := strings.ToLower(request.Email)
 	user := domain.User{
 		FirstName:    request.FirstName,
 		LastName:     request.LastName,
-		Email:        request.Email,
+		Email:        goodEmail,
 		PasswordHash: string(passwordHash),
 	}
 
@@ -65,10 +64,16 @@ func (service UserServiceImpl) Update(request client.UserUpdateRequest) client.U
 
 	user, err := service.UserRepository.FindById(tx, request.Id)
 	helper.PanicIfError(err)
+	exception.PanicIfNotFound(user.Id)
 
+	userEmail, err := service.UserRepository.FindByEmail(tx, request.Email)
+	helper.PanicIfError(err)
+	exception.PanicIfEmailUsed(request.Email, userEmail.Email)
+
+	goodEmail := strings.ToLower(request.Email)
 	user.FirstName = request.FirstName
 	user.LastName = request.LastName
-	user.Email = request.Email
+	user.Email = goodEmail
 
 	updatedUser := service.UserRepository.Update(tx, user)
 
@@ -81,6 +86,7 @@ func (service UserServiceImpl) Delete(userId int) {
 
 	user, err := service.UserRepository.FindById(tx, userId)
 	helper.PanicIfError(err)
+	exception.PanicIfNotFound(user.Id)
 
 	service.UserRepository.Delete(tx, user)
 }
@@ -94,6 +100,7 @@ func (service UserServiceImpl) Session(request client.UserSessionRequest) client
 
 	user, err := service.UserRepository.FindByEmail(tx, request.Email)
 	helper.PanicIfError(err)
+	exception.PanicIfNotFound(user.Id)
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password))
 	helper.PanicIfError(err)
@@ -107,6 +114,7 @@ func (service UserServiceImpl) FindById(userId int) client.UserResponse {
 
 	user, err := service.UserRepository.FindById(tx, userId)
 	helper.PanicIfError(err)
+	exception.PanicIfNotFound(user.Id)
 
 	return helper.ToUserResponse(user)
 }
@@ -117,6 +125,7 @@ func (service UserServiceImpl) FindByEmail(userEmail string) client.UserResponse
 
 	user, err := service.UserRepository.FindByEmail(tx, userEmail)
 	helper.PanicIfError(err)
+	exception.PanicIfNotFound(user.Id)
 
 	return helper.ToUserResponse(user)
 }
