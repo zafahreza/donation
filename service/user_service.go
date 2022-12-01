@@ -1,15 +1,16 @@
 package service
 
 import (
+	"context"
 	"donation/entity/client"
 )
 
 type UserService interface {
-	Create(request client.UserCreateRequest) client.UserResponse
-	Update(request client.UserUpdateRequest) client.UserResponse
-	Delete(userId int)
-	Session(request client.UserSessionRequest) client.UserResponse
-	FindById(userId int) client.UserResponse
-	FindByEmail(userEmail string) client.UserResponse
-	FindAll() []client.UserResponse
+	Create(ctx context.Context, request client.UserCreateRequest) client.UserResponse
+	Update(ctx context.Context, request client.UserUpdateRequest) client.UserResponse
+	Delete(ctx context.Context, userId int)
+	Session(ctx context.Context, request client.UserSessionRequest) client.UserResponse
+	FindById(ctx context.Context, userId int) client.UserResponse
+	FindByEmail(ctx context.Context, userEmail string) client.UserResponse
+	FindAll(ctx context.Context) []client.UserResponse
 }

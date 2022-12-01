@@ -24,7 +24,7 @@ func (handler UserHandlerImpl) Create(w http.ResponseWriter, r *http.Request, pa
 	userRequest := client.UserCreateRequest{}
 	helper.ReadFromRequestBody(r, &userRequest)
 
-	userResponse := handler.UserService.Create(userRequest)
+	userResponse := handler.UserService.Create(r.Context(), userRequest)
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,
 		Status: "OK",
@@ -44,7 +44,7 @@ func (handler UserHandlerImpl) Update(w http.ResponseWriter, r *http.Request, pa
 
 	userRequest.Id = userId
 
-	userResponse := handler.UserService.Update(userRequest)
+	userResponse := handler.UserService.Update(r.Context(), userRequest)
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,
 		Status: "OK",
@@ -59,7 +59,7 @@ func (handler UserHandlerImpl) Delete(w http.ResponseWriter, r *http.Request, pa
 	userId, err := strconv.Atoi(id)
 	helper.PanicIfError(err)
 
-	handler.UserService.Delete(userId)
+	handler.UserService.Delete(r.Context(), userId)
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,
 		Status: "OK",
@@ -72,7 +72,7 @@ func (handler UserHandlerImpl) Session(w http.ResponseWriter, r *http.Request, p
 	userRequest := client.UserSessionRequest{}
 	helper.ReadFromRequestBody(r, &userRequest)
 
-	userResponse := handler.UserService.Session(userRequest)
+	userResponse := handler.UserService.Session(r.Context(), userRequest)
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,
 		Status: "OK",
@@ -87,7 +87,7 @@ func (handler UserHandlerImpl) FindById(w http.ResponseWriter, r *http.Request, 
 	userId, err := strconv.Atoi(id)
 	helper.PanicIfError(err)
 
-	userResponse := handler.UserService.FindById(userId)
+	userResponse := handler.UserService.FindById(r.Context(), userId)
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,
 		Status: "OK",
@@ -100,7 +100,7 @@ func (handler UserHandlerImpl) FindById(w http.ResponseWriter, r *http.Request, 
 func (handler UserHandlerImpl) FindByEmail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	userEmail := params.ByName("userEmail")
 
-	userResponse := handler.UserService.FindByEmail(userEmail)
+	userResponse := handler.UserService.FindByEmail(r.Context(), userEmail)
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,
 		Status: "OK",
@@ -111,7 +111,7 @@ func (handler UserHandlerImpl) FindByEmail(w http.ResponseWriter, r *http.Reques
 }
 
 func (handler UserHandlerImpl) FindAll(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	userResponse := handler.UserService.FindAll()
+	userResponse := handler.UserService.FindAll(r.Context())
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,
 		Status: "OK",

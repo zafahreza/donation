@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"donation/entity/client"
 	"donation/entity/domain"
 	"donation/exception"
@@ -28,14 +29,14 @@ func NewUserService(userRepository repository.UserRepository, DB *gorm.DB, valid
 	}
 }
 
-func (service UserServiceImpl) Create(request client.UserCreateRequest) client.UserResponse {
+func (service UserServiceImpl) Create(ctx context.Context, request client.UserCreateRequest) client.UserResponse {
 	err := service.Validate.Struct(request)
 	helper.PanicIfError(err)
 
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	userEmail, err := service.UserRepository.FindByEmail(tx, request.Email)
+	userEmail, err := service.UserRepository.FindByEmail(ctx, tx, request.Email)
 	helper.PanicIfError(err)
 	exception.PanicIfEmailUsed(request.Email, userEmail.Email)
 
@@ -50,55 +51,58 @@ func (service UserServiceImpl) Create(request client.UserCreateRequest) client.U
 		PasswordHash: string(passwordHash),
 	}
 
-	newUser := service.UserRepository.Save(tx, user)
+	newUser := service.UserRepository.Save(ctx, tx, user)
 
 	return helper.ToUserResponse(newUser)
 }
 
-func (service UserServiceImpl) Update(request client.UserUpdateRequest) client.UserResponse {
+func (service UserServiceImpl) Update(ctx context.Context, request client.UserUpdateRequest) client.UserResponse {
 	err := service.Validate.Struct(request)
 	helper.PanicIfError(err)
 
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindById(tx, request.Id)
+	user, err := service.UserRepository.FindById(ctx, tx, request.Id)
 	helper.PanicIfError(err)
 	exception.PanicIfNotFound(user.Id)
 
-	userEmail, err := service.UserRepository.FindByEmail(tx, request.Email)
-	helper.PanicIfError(err)
-	exception.PanicIfEmailUsed(request.Email, userEmail.Email)
-
 	goodEmail := strings.ToLower(request.Email)
+
+	if user.Email != goodEmail {
+		userEmail, err := service.UserRepository.FindByEmail(ctx, tx, request.Email)
+		helper.PanicIfError(err)
+		exception.PanicIfEmailUsed(request.Email, userEmail.Email)
+	}
+
 	user.FirstName = request.FirstName
 	user.LastName = request.LastName
 	user.Email = goodEmail
 
-	updatedUser := service.UserRepository.Update(tx, user)
+	updatedUser := service.UserRepository.Update(ctx, tx, user)
 
 	return helper.ToUserResponse(updatedUser)
 }
 
-func (service UserServiceImpl) Delete(userId int) {
+func (service UserServiceImpl) Delete(ctx context.Context, userId int) {
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindById(tx, userId)
+	user, err := service.UserRepository.FindById(ctx, tx, userId)
 	helper.PanicIfError(err)
 	exception.PanicIfNotFound(user.Id)
 
-	service.UserRepository.Delete(tx, user)
+	service.UserRepository.Delete(ctx, tx, user)
 }
 
-func (service UserServiceImpl) Session(request client.UserSessionRequest) client.UserResponse {
+func (service UserServiceImpl) Session(ctx context.Context, request client.UserSessionRequest) client.UserResponse {
 	err := service.Validate.Struct(request)
 	helper.PanicIfError(err)
 
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindByEmail(tx, request.Email)
+	user, err := service.UserRepository.FindByEmail(ctx, tx, request.Email)
 	helper.PanicIfError(err)
 	exception.PanicIfNotFound(user.Id)
 
@@ -108,33 +112,33 @@ func (service UserServiceImpl) Session(request client.UserSessionRequest) client
 	return helper.ToUserResponse(user)
 }
 
-func (service UserServiceImpl) FindById(userId int) client.UserResponse {
+func (service UserServiceImpl) FindById(ctx context.Context, userId int) client.UserResponse {
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindById(tx, userId)
+	user, err := service.UserRepository.FindById(ctx, tx, userId)
 	helper.PanicIfError(err)
 	exception.PanicIfNotFound(user.Id)
 
 	return helper.ToUserResponse(user)
 }
 
-func (service UserServiceImpl) FindByEmail(userEmail string) client.UserResponse {
+func (service UserServiceImpl) FindByEmail(ctx context.Context, userEmail string) client.UserResponse {
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindByEmail(tx, userEmail)
+	user, err := service.UserRepository.FindByEmail(ctx, tx, userEmail)
 	helper.PanicIfError(err)
 	exception.PanicIfNotFound(user.Id)
 
 	return helper.ToUserResponse(user)
 }
 
-func (service UserServiceImpl) FindAll() []client.UserResponse {
+func (service UserServiceImpl) FindAll(ctx context.Context) []client.UserResponse {
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	users := service.UserRepository.FindAll(tx)
+	users := service.UserRepository.FindAll(ctx, tx)
 
 	return helper.ToUserResponses(users)
 }
