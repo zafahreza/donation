@@ -20,7 +20,7 @@ func NewUserHanlder(userService service.UserService) UserHandler {
 	}
 }
 
-func (handler UserHandlerImpl) Create(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (handler *UserHandlerImpl) Create(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	userRequest := client.UserCreateRequest{}
 	helper.ReadFromRequestBody(r, &userRequest)
 
@@ -34,7 +34,7 @@ func (handler UserHandlerImpl) Create(w http.ResponseWriter, r *http.Request, pa
 	helper.WriteToResponseBody(w, webResponse)
 }
 
-func (handler UserHandlerImpl) Update(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (handler *UserHandlerImpl) Update(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	userRequest := client.UserUpdateRequest{}
 	helper.ReadFromRequestBody(r, &userRequest)
 
@@ -54,7 +54,7 @@ func (handler UserHandlerImpl) Update(w http.ResponseWriter, r *http.Request, pa
 	helper.WriteToResponseBody(w, webResponse)
 }
 
-func (handler UserHandlerImpl) Delete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (handler *UserHandlerImpl) Delete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	id := params.ByName("userId")
 	userId, err := strconv.Atoi(id)
 	helper.PanicIfError(err)
@@ -68,7 +68,7 @@ func (handler UserHandlerImpl) Delete(w http.ResponseWriter, r *http.Request, pa
 	helper.WriteToResponseBody(w, webResponse)
 }
 
-func (handler UserHandlerImpl) Session(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (handler *UserHandlerImpl) Session(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	userRequest := client.UserSessionRequest{}
 	helper.ReadFromRequestBody(r, &userRequest)
 
@@ -82,7 +82,7 @@ func (handler UserHandlerImpl) Session(w http.ResponseWriter, r *http.Request, p
 	helper.WriteToResponseBody(w, webResponse)
 }
 
-func (handler UserHandlerImpl) FindById(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (handler *UserHandlerImpl) FindById(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	id := params.ByName("userId")
 	userId, err := strconv.Atoi(id)
 	helper.PanicIfError(err)
@@ -97,7 +97,7 @@ func (handler UserHandlerImpl) FindById(w http.ResponseWriter, r *http.Request, 
 	helper.WriteToResponseBody(w, webResponse)
 }
 
-func (handler UserHandlerImpl) FindByEmail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (handler *UserHandlerImpl) FindByEmail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	userEmail := params.ByName("userEmail")
 
 	userResponse := handler.UserService.FindByEmail(r.Context(), userEmail)
@@ -110,7 +110,7 @@ func (handler UserHandlerImpl) FindByEmail(w http.ResponseWriter, r *http.Reques
 	helper.WriteToResponseBody(w, webResponse)
 }
 
-func (handler UserHandlerImpl) FindAll(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (handler *UserHandlerImpl) FindAll(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	userResponse := handler.UserService.FindAll(r.Context())
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,

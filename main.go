@@ -5,6 +5,7 @@ import (
 	"donation/handler"
 	"donation/repository"
 	"donation/service"
+	"fmt"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
@@ -13,9 +14,10 @@ import (
 func main() {
 	db := app.NewSetupDB()
 	validate := validator.New()
+	chc := app.NewChacheDB()
 
 	userRepository := repository.NewUserRepository()
-	userService := service.NewUserService(userRepository, db, validate)
+	userService := service.NewUserService(userRepository, chc, db, validate)
 	userHandler := handler.NewUserHanlder(userService)
 
 	router := app.NewRouter(userHandler)
@@ -24,6 +26,8 @@ func main() {
 		Addr:    "localhost:3333",
 		Handler: router,
 	}
+
+	fmt.Println("server is running.....")
 
 	server.ListenAndServe()
 }

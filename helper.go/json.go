@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"donation/entity/domain"
 	"encoding/json"
 	"net/http"
 )
@@ -16,4 +17,12 @@ func WriteToResponseBody(w http.ResponseWriter, response interface{}) {
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(response)
 	PanicIfError(err)
+}
+
+func UnMarshal(result string) domain.User {
+	var user domain.User
+	err := json.Unmarshal([]byte(result), &user)
+	PanicIfError(err)
+
+	return user
 }
