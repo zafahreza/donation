@@ -27,7 +27,7 @@ func SendOtp(otp domain.OTP, smtp *mail.SMTPClient) {
 	body := "Please input Your Verification Code: " + otp.OTP + " to complete registration"
 
 	email := mail.NewMSG()
-	email.SetFrom("From Donation Website <fahrezaspam@gmail.com>")
+	email.SetFrom("Donation Website <fahrezaspam@gmail.com>")
 	email.AddTo(otp.Email)
 	email.SetSubject("Verification Code")
 	email.SetBody(mail.TextPlain, body)

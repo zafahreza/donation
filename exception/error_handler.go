@@ -9,6 +9,10 @@ import (
 )
 
 func ErrorHandler(w http.ResponseWriter, r *http.Request, err interface{}) {
+	if unauthorizedError(w, r, err) {
+		return
+	}
+
 	if notFoundError(w, r, err) {
 		return
 	}
@@ -126,6 +130,25 @@ func wrongOtpError(w http.ResponseWriter, r *http.Request, err interface{}) bool
 		webResponse := client.UserAPIResponse{
 			Code:   http.StatusBadRequest,
 			Status: "BAD REQUEST",
+			Data:   exception.Error,
+		}
+
+		helper.WriteToResponseBody(w, webResponse)
+		return true
+	}
+
+	return false
+}
+
+func unauthorizedError(w http.ResponseWriter, r *http.Request, err interface{}) bool {
+	exception, ok := err.(UnauthorizedError)
+	if ok {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+
+		webResponse := client.UserAPIResponse{
+			Code:   http.StatusUnauthorized,
+			Status: "UNAUTHORIZED",
 			Data:   exception.Error,
 		}
 

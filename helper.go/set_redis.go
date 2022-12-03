@@ -22,7 +22,7 @@ func SetChacheByUserId(ctx context.Context, chc *redis.Client, user domain.User)
 }
 
 func SetChacheByUserEmail(ctx context.Context, chc *redis.Client, user domain.User) {
-	if user.Id != 0 {
+	if user.Id != 0 && user.IsActive == true {
 		fmt.Println("get data by id from db")
 		newKey := "userbyemail" + user.Email
 		byteString, err := json.Marshal(user)

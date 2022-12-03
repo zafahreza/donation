@@ -6,6 +6,7 @@ import (
 	"donation/entity/domain"
 	"donation/exception"
 	"donation/helper.go"
+	"donation/middleware"
 	"donation/repository"
 	"errors"
 	"github.com/go-redis/redis/v9"
@@ -114,7 +115,7 @@ func (service *UserServiceImpl) Delete(ctx context.Context, userId int) {
 
 }
 
-func (service *UserServiceImpl) Session(ctx context.Context, request client.UserSessionRequest) client.UserResponse {
+func (service *UserServiceImpl) Session(ctx context.Context, request client.UserSessionRequest) client.UserLoginResponse {
 	err := service.Validate.Struct(request)
 	helper.PanicIfError(err)
 
@@ -125,12 +126,18 @@ func (service *UserServiceImpl) Session(ctx context.Context, request client.User
 	helper.PanicIfError(err)
 	exception.PanicIfNotFound(user.Id)
 
+	if user.IsActive == false {
+		panic(exception.NewUnauthorizedError(errors.New("your account is not active, please activate")))
+	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password))
 	if err != nil {
 		panic(exception.NewWrongPasswordError(errors.New("wrong password")))
 	}
 
-	return helper.ToUserResponse(user)
+	token := middleware.NewAuthMiddleware().GenerateToken(user.Id)
+
+	return helper.ToUserLoginResponse(user, token)
 }
 
 func (service *UserServiceImpl) FindById(ctx context.Context, userId int) client.UserResponse {
@@ -171,8 +178,10 @@ func (service *UserServiceImpl) FindOtp(ctx context.Context, request client.User
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
+	goodEmail := strings.ToLower(request.Email)
+
 	userOtp := domain.OTP{
-		Email: request.Email,
+		Email: goodEmail,
 		OTP:   request.OTP,
 	}
 
@@ -189,4 +198,40 @@ func (service *UserServiceImpl) FindOtp(ctx context.Context, request client.User
 	service.UserRepository.DelOTP(ctx, service.Chache, otp)
 
 	return helper.ToUserResponse(user)
+}
+
+func (service *UserServiceImpl) GetNewOtp(ctx context.Context, request client.UserGetNewOtpRequest) client.UserGetNewOtpResponse {
+	err := service.Validate.Struct(request)
+	helper.PanicIfError(err)
+
+	tx := service.DB.Begin()
+	defer helper.CommitOrRollback(tx)
+
+	goodEmail := strings.ToLower(request.Email)
+
+	user, err := service.UserRepository.FindByEmail(ctx, service.Chache, tx, goodEmail)
+	helper.PanicIfError(err)
+	exception.PanicIfNotFound(user.Id)
+
+	if user.IsActive == true {
+		panic(exception.NewWrongOtpError(errors.New("this user is already active")))
+	}
+
+	stringOtp := helper.GenerateOtp()
+
+	otp := domain.OTP{
+		Email: goodEmail,
+		OTP:   stringOtp,
+	}
+
+	go helper.SendOtp(otp, service.Smtp)
+
+	service.UserRepository.SetOTp(ctx, service.Chache, otp)
+
+	response := client.UserGetNewOtpResponse{
+		Email: goodEmail,
+		Msg:   "OTP sent successfully, check your email",
+	}
+
+	return response
 }

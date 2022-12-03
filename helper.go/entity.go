@@ -25,3 +25,15 @@ func ToUserResponses(users []domain.User) []client.UserResponse {
 
 	return userResponses
 }
+
+func ToUserLoginResponse(user domain.User, token string) client.UserLoginResponse {
+	return client.UserLoginResponse{
+		Id:        user.Id,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		Bio:       user.Bio,
+		Token:     token,
+		UpdatedAt: user.UpdatedAt,
+	}
+}

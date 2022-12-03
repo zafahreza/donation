@@ -15,6 +15,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, chache *redis.Client, tx *gorm.DB, UserEmail string) (domain.User, error)
 	FindAll(ctx context.Context, tx *gorm.DB) []domain.User
 	FindOTp(ctx context.Context, chache *redis.Client, otp domain.OTP) (domain.OTP, error)
+	SetOTp(ctx context.Context, chache *redis.Client, otp domain.OTP)
 	DelOTP(ctx context.Context, chache *redis.Client, otp domain.OTP)
 	UpdateStatusEmail(ctx context.Context, tx *gorm.DB, otp domain.OTP) domain.User
 }

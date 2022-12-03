@@ -5,18 +5,15 @@ import (
 	"github.com/joho/godotenv"
 	mail "github.com/xhit/go-simple-mail/v2"
 	"os"
+	"time"
 )
 
 func NewSmtpClient() *mail.SMTPClient {
 	err := godotenv.Load("mail.env")
 	helper.PanicIfError(err)
-	//host := os.Getenv("SMTP_HOST")
+
 	username := os.Getenv("SMTP_NAME")
 	password := os.Getenv("SMTP_PASS")
-	//port := os.Getenv("SMTP_PORT")
-	//
-	//smtpPort, err := strconv.Atoi(port)
-	//helper.PanicIfError(err)
 
 	smtp := mail.NewSMTPClient()
 	smtp.Host = "smtp.gmail.com"
@@ -24,6 +21,10 @@ func NewSmtpClient() *mail.SMTPClient {
 	smtp.Username = username
 	smtp.Password = password
 	smtp.Encryption = mail.EncryptionTLS
+
+	smtp.SendTimeout = 10 * time.Second
+	smtp.ConnectTimeout = 10 * time.Second
+	smtp.KeepAlive = true
 
 	smtpClient, err := smtp.Connect()
 	helper.PanicIfError(err)

@@ -3,6 +3,7 @@ package handler
 import (
 	"donation/entity/client"
 	"donation/helper.go"
+	"donation/middleware"
 	"donation/service"
 	"net/http"
 	"strconv"
@@ -11,12 +12,14 @@ import (
 )
 
 type UserHandlerImpl struct {
-	UserService service.UserService
+	UserService    service.UserService
+	AuthMiddleware middleware.AuthMidleware
 }
 
-func NewUserHanlder(userService service.UserService) UserHandler {
+func NewUserHanlder(userService service.UserService, authMiddleware middleware.AuthMidleware) UserHandler {
 	return &UserHandlerImpl{
-		UserService: userService,
+		UserService:    userService,
+		AuthMiddleware: authMiddleware,
 	}
 }
 
@@ -35,12 +38,10 @@ func (handler *UserHandlerImpl) Create(w http.ResponseWriter, r *http.Request, p
 }
 
 func (handler *UserHandlerImpl) Update(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	userId := handler.AuthMiddleware.ValidateToken(r)
+
 	userRequest := client.UserUpdateRequest{}
 	helper.ReadFromRequestBody(r, &userRequest)
-
-	id := params.ByName("userId")
-	userId, err := strconv.Atoi(id)
-	helper.PanicIfError(err)
 
 	userRequest.Id = userId
 
@@ -55,9 +56,7 @@ func (handler *UserHandlerImpl) Update(w http.ResponseWriter, r *http.Request, p
 }
 
 func (handler *UserHandlerImpl) Delete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	id := params.ByName("userId")
-	userId, err := strconv.Atoi(id)
-	helper.PanicIfError(err)
+	userId := handler.AuthMiddleware.ValidateToken(r)
 
 	handler.UserService.Delete(r.Context(), userId)
 	webResponse := client.UserAPIResponse{
@@ -126,6 +125,20 @@ func (handler *UserHandlerImpl) FindOtp(w http.ResponseWriter, r *http.Request, 
 	helper.ReadFromRequestBody(r, &userRequest)
 
 	userResponse := handler.UserService.FindOtp(r.Context(), userRequest)
+	webResponse := client.UserAPIResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   userResponse,
+	}
+
+	helper.WriteToResponseBody(w, webResponse)
+}
+
+func (handler *UserHandlerImpl) GetNewOtp(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	userRequest := client.UserGetNewOtpRequest{}
+	helper.ReadFromRequestBody(r, &userRequest)
+
+	userResponse := handler.UserService.GetNewOtp(r.Context(), userRequest)
 	webResponse := client.UserAPIResponse{
 		Code:   http.StatusOK,
 		Status: "OK",

@@ -137,3 +137,15 @@ func (UserRepository *UserRepositoryImpl) UpdateStatusEmail(ctx context.Context,
 
 	return user
 }
+
+func (UserRepository *UserRepositoryImpl) SetOTp(ctx context.Context, chache *redis.Client, otp domain.OTP) {
+	otpMarshal, err := json.Marshal(otp)
+
+	key := "otpfor" + otp.Email
+
+	err = chache.Set(ctx, key, otpMarshal, 60*time.Second).Err()
+
+	key2 := "userbyemail" + otp.Email
+	chache.Del(ctx, key2)
+	helper.PanicIfError(err)
+}

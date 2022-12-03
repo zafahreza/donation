@@ -3,6 +3,8 @@ package main
 import (
 	"donation/app"
 	"donation/handler"
+	"donation/helper.go"
+	"donation/middleware"
 	"donation/repository"
 	"donation/service"
 	"fmt"
@@ -19,7 +21,8 @@ func main() {
 
 	userRepository := repository.NewUserRepository()
 	userService := service.NewUserService(userRepository, chc, db, validate, smtp)
-	userHandler := handler.NewUserHanlder(userService)
+	authMiddleware := middleware.NewAuthMiddleware()
+	userHandler := handler.NewUserHanlder(userService, authMiddleware)
 
 	router := app.NewRouter(userHandler)
 
@@ -30,5 +33,6 @@ func main() {
 
 	fmt.Println("server is running.....")
 
-	server.ListenAndServe()
+	err := server.ListenAndServe()
+	helper.PanicIfError(err)
 }
