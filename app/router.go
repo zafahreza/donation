@@ -17,6 +17,7 @@ func NewRouter(userHandler handler.UserHandler) *httprouter.Router {
 	router.PUT("/api/users/:userId", userHandler.Update)
 	router.DELETE("/api/users/:userId", userHandler.Delete)
 	router.POST("/api/users/session", userHandler.Session)
+	router.POST("/api/users/otp", userHandler.FindOtp)
 
 	router.PanicHandler = exception.ErrorHandler
 

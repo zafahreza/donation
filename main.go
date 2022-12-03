@@ -15,9 +15,10 @@ func main() {
 	db := app.NewSetupDB()
 	validate := validator.New()
 	chc := app.NewChacheDB()
+	smtp := app.NewSmtpClient()
 
 	userRepository := repository.NewUserRepository()
-	userService := service.NewUserService(userRepository, chc, db, validate)
+	userService := service.NewUserService(userRepository, chc, db, validate, smtp)
 	userHandler := handler.NewUserHanlder(userService)
 
 	router := app.NewRouter(userHandler)

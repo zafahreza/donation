@@ -4,10 +4,13 @@ import (
 	"context"
 	"donation/entity/domain"
 	"donation/helper.go"
+	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis/v9"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"strconv"
+	"time"
 )
 
 type UserRepositoryImpl struct {
@@ -17,9 +20,17 @@ func NewUserRepository() UserRepository {
 	return &UserRepositoryImpl{}
 }
 
-func (UserRepository *UserRepositoryImpl) Save(ctx context.Context, tx *gorm.DB, user domain.User) domain.User {
+func (UserRepository *UserRepositoryImpl) Save(ctx context.Context, chache *redis.Client, tx *gorm.DB, user domain.User, otp domain.OTP) domain.User {
 	err := tx.WithContext(ctx).Create(&user).Error
 	helper.PanicIfError(err)
+
+	otpMarshal, err := json.Marshal(otp)
+
+	key := "otpfor" + otp.Email
+
+	err = chache.Set(ctx, key, otpMarshal, 60*time.Second).Err()
+	helper.PanicIfError(err)
+
 	fmt.Println("save new data to db")
 
 	return user
@@ -94,4 +105,35 @@ func (UserRepository *UserRepositoryImpl) FindAll(ctx context.Context, tx *gorm.
 	helper.PanicIfError(err)
 
 	return users
+}
+
+func (UserRepository *UserRepositoryImpl) FindOTp(ctx context.Context, chache *redis.Client, otp domain.OTP) (domain.OTP, error) {
+	key := "otpfor" + otp.Email
+	result, err := chache.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return otp, err
+	}
+	err = json.Unmarshal([]byte(result), &otp)
+	helper.PanicIfError(err)
+
+	return otp, nil
+
+}
+
+func (UserRepository *UserRepositoryImpl) DelOTP(ctx context.Context, chache *redis.Client, otp domain.OTP) {
+
+	key := "otpfor" + otp.Email
+
+	chache.Del(ctx, key)
+	fmt.Println("del data otp from redis")
+
+}
+
+func (UserRepository *UserRepositoryImpl) UpdateStatusEmail(ctx context.Context, tx *gorm.DB, otp domain.OTP) domain.User {
+	var user domain.User
+
+	result := tx.WithContext(ctx).Model(&user).Clauses(clause.Returning{}).Where("email = ?", otp.Email).Update("is_active", true)
+	helper.PanicIfError(result.Error)
+
+	return user
 }

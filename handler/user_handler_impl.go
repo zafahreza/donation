@@ -120,3 +120,17 @@ func (handler *UserHandlerImpl) FindAll(w http.ResponseWriter, r *http.Request, 
 
 	helper.WriteToResponseBody(w, webResponse)
 }
+
+func (handler *UserHandlerImpl) FindOtp(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	userRequest := client.UserOtpRequest{}
+	helper.ReadFromRequestBody(r, &userRequest)
+
+	userResponse := handler.UserService.FindOtp(r.Context(), userRequest)
+	webResponse := client.UserAPIResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   userResponse,
+	}
+
+	helper.WriteToResponseBody(w, webResponse)
+}

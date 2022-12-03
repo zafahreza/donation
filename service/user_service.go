@@ -13,4 +13,5 @@ type UserService interface {
 	FindById(ctx context.Context, userId int) client.UserResponse
 	FindByEmail(ctx context.Context, userEmail string) client.UserResponse
 	FindAll(ctx context.Context) []client.UserResponse
+	FindOtp(ctx context.Context, request client.UserOtpRequest) client.UserResponse
 }

@@ -14,4 +14,5 @@ type UserHandler interface {
 	FindById(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	FindByEmail(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	FindAll(w http.ResponseWriter, r *http.Request, params httprouter.Params)
+	FindOtp(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }

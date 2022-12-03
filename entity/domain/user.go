@@ -11,7 +11,7 @@ type User struct {
 	Email        string
 	PasswordHash string
 	Bio          string
-	ImageUrl     string
+	IsActive     bool
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
