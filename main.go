@@ -2,8 +2,9 @@ package main
 
 import (
 	"donation/app"
+	"donation/chache"
 	"donation/handler"
-	"donation/helper.go"
+	"donation/helper"
 	"donation/middleware"
 	"donation/repository"
 	"donation/service"
@@ -20,7 +21,8 @@ func main() {
 	smtp := app.NewSmtpClient()
 
 	userRepository := repository.NewUserRepository()
-	userService := service.NewUserService(userRepository, chc, db, validate, smtp)
+	userChache := chache.NewUserChache(chc)
+	userService := service.NewUserService(userRepository, userChache, db, validate, smtp)
 	authMiddleware := middleware.NewAuthMiddleware()
 	userHandler := handler.NewUserHanlder(userService, authMiddleware)
 

@@ -2,7 +2,7 @@ package exception
 
 import (
 	"donation/entity/client"
-	"donation/helper.go"
+	"donation/helper"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"

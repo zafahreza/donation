@@ -2,15 +2,17 @@ package service
 
 import (
 	"context"
+	"donation/chache"
 	"donation/entity/client"
 	"donation/entity/domain"
 	"donation/exception"
-	"donation/helper.go"
+	"donation/helper"
 	"donation/middleware"
 	"donation/repository"
 	"errors"
 	"github.com/go-redis/redis/v9"
 	mail "github.com/xhit/go-simple-mail/v2"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -21,18 +23,18 @@ import (
 
 type UserServiceImpl struct {
 	UserRepository repository.UserRepository
+	UserChache     chache.UserChache
 	DB             *gorm.DB
 	Validate       *validator.Validate
-	Chache         *redis.Client
 	Smtp           *mail.SMTPClient
 }
 
-func NewUserService(userRepository repository.UserRepository, chc *redis.Client, DB *gorm.DB, validate *validator.Validate, smtp *mail.SMTPClient) UserService {
+func NewUserService(userRepository repository.UserRepository, userChache chache.UserChache, DB *gorm.DB, validate *validator.Validate, smtp *mail.SMTPClient) UserService {
 	return &UserServiceImpl{
 		UserRepository: userRepository,
+		UserChache:     userChache,
 		DB:             DB,
 		Validate:       validate,
-		Chache:         chc,
 		Smtp:           smtp,
 	}
 }
@@ -44,7 +46,7 @@ func (service *UserServiceImpl) Create(ctx context.Context, request client.UserC
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	userEmail, err := service.UserRepository.FindByEmail(ctx, service.Chache, tx, request.Email)
+	userEmail, err := service.UserRepository.FindByEmail(ctx, tx, request.Email)
 	helper.PanicIfError(err)
 	exception.PanicIfEmailUsed(request.Email, userEmail.Email)
 
@@ -68,8 +70,10 @@ func (service *UserServiceImpl) Create(ctx context.Context, request client.UserC
 		OTP:   stringOtp,
 	}
 
+	go service.UserChache.SetOtp(ctx, otp)
 	go helper.SendOtp(otp, service.Smtp)
-	newUser := service.UserRepository.Save(ctx, service.Chache, tx, user, otp)
+
+	newUser := service.UserRepository.Save(ctx, tx, user, otp)
 
 	return helper.ToUserResponse(newUser)
 }
@@ -81,14 +85,20 @@ func (service *UserServiceImpl) Update(ctx context.Context, request client.UserU
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindById(ctx, service.Chache, tx, request.Id)
-	helper.PanicIfError(err)
-	exception.PanicIfNotFound(user.Id)
+	var user domain.User
+
+	key := "userid" + strconv.Itoa(request.Id)
+	user, err = service.UserChache.Get(ctx, key)
+	if err == redis.Nil {
+		user, err = service.UserRepository.FindById(ctx, tx, request.Id)
+		helper.PanicIfError(err)
+		exception.PanicIfNotFound(user.Id)
+	}
 
 	goodEmail := strings.ToLower(request.Email)
 
 	if user.Email != goodEmail {
-		userEmail, err := service.UserRepository.FindByEmail(ctx, service.Chache, tx, goodEmail)
+		userEmail, err := service.UserRepository.FindByEmail(ctx, tx, goodEmail)
 		helper.PanicIfError(err)
 		exception.PanicIfEmailUsed(goodEmail, userEmail.Email)
 	}
@@ -98,7 +108,10 @@ func (service *UserServiceImpl) Update(ctx context.Context, request client.UserU
 	user.Email = goodEmail
 	user.Bio = request.Bio
 
-	updatedUser := service.UserRepository.Update(ctx, service.Chache, tx, user)
+	updatedUser := service.UserRepository.Update(ctx, tx, user)
+
+	key2 := "userbyemail" + goodEmail
+	go service.UserChache.Del(ctx, key, key2)
 
 	return helper.ToUserResponse(updatedUser)
 }
@@ -107,11 +120,21 @@ func (service *UserServiceImpl) Delete(ctx context.Context, userId int) {
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindById(ctx, service.Chache, tx, userId)
-	helper.PanicIfError(err)
-	exception.PanicIfNotFound(user.Id)
+	var user domain.User
 
-	service.UserRepository.Delete(ctx, service.Chache, tx, user)
+	key := "userid" + strconv.Itoa(userId)
+
+	user, err := service.UserChache.Get(ctx, key)
+	if err == redis.Nil {
+		user, err = service.UserRepository.FindById(ctx, tx, userId)
+		helper.PanicIfError(err)
+		exception.PanicIfNotFound(user.Id)
+	}
+
+	service.UserRepository.Delete(ctx, tx, user)
+
+	key2 := "userbyemail" + user.Email
+	go service.UserChache.Del(ctx, key, key2)
 
 }
 
@@ -122,9 +145,17 @@ func (service *UserServiceImpl) Session(ctx context.Context, request client.User
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindByEmail(ctx, service.Chache, tx, request.Email)
-	helper.PanicIfError(err)
-	exception.PanicIfNotFound(user.Id)
+	var user domain.User
+
+	key := "userbyemail" + request.Email
+
+	user, err = service.UserChache.Get(ctx, key)
+	if err == redis.Nil {
+		user, err = service.UserRepository.FindByEmail(ctx, tx, request.Email)
+		helper.PanicIfError(err)
+		exception.PanicIfNotFound(user.Id)
+		go service.UserChache.Set(ctx, user, key)
+	}
 
 	if user.IsActive == false {
 		panic(exception.NewUnauthorizedError(errors.New("your account is not active, please activate")))
@@ -144,9 +175,17 @@ func (service *UserServiceImpl) FindById(ctx context.Context, userId int) client
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindById(ctx, service.Chache, tx, userId)
-	helper.PanicIfError(err)
-	exception.PanicIfNotFound(user.Id)
+	var user domain.User
+
+	key := "userid" + strconv.Itoa(userId)
+
+	user, err := service.UserChache.Get(ctx, key)
+	if err == redis.Nil {
+		user, err = service.UserRepository.FindById(ctx, tx, userId)
+		helper.PanicIfError(err)
+		exception.PanicIfNotFound(user.Id)
+		go service.UserChache.Set(ctx, user, key)
+	}
 
 	return helper.ToUserResponse(user)
 }
@@ -155,9 +194,17 @@ func (service *UserServiceImpl) FindByEmail(ctx context.Context, userEmail strin
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
-	user, err := service.UserRepository.FindByEmail(ctx, service.Chache, tx, userEmail)
-	helper.PanicIfError(err)
-	exception.PanicIfNotFound(user.Id)
+	var user domain.User
+
+	key := "userbyemail" + userEmail
+
+	user, err := service.UserChache.Get(ctx, key)
+	if err == redis.Nil {
+		user, err = service.UserRepository.FindByEmail(ctx, tx, userEmail)
+		helper.PanicIfError(err)
+		exception.PanicIfNotFound(user.Id)
+		go service.UserChache.Set(ctx, user, key)
+	}
 
 	return helper.ToUserResponse(user)
 }
@@ -185,7 +232,7 @@ func (service *UserServiceImpl) FindOtp(ctx context.Context, request client.User
 		OTP:   request.OTP,
 	}
 
-	otp, err := service.UserRepository.FindOTp(ctx, service.Chache, userOtp)
+	otp, err := service.UserChache.GetOtp(ctx, userOtp)
 	if err == redis.Nil {
 		panic(exception.NewNotFoundError(errors.New("otp not found")))
 	}
@@ -195,7 +242,11 @@ func (service *UserServiceImpl) FindOtp(ctx context.Context, request client.User
 	}
 
 	user := service.UserRepository.UpdateStatusEmail(ctx, tx, otp)
-	service.UserRepository.DelOTP(ctx, service.Chache, otp)
+
+	key := "userid" + strconv.Itoa(user.Id)
+	key1 := "userbyemail" + otp.Email
+	key2 := "otpfor" + otp.Email
+	go service.UserChache.Del(ctx, key, key1, key2)
 
 	return helper.ToUserResponse(user)
 }
@@ -207,31 +258,42 @@ func (service *UserServiceImpl) GetNewOtp(ctx context.Context, request client.Us
 	tx := service.DB.Begin()
 	defer helper.CommitOrRollback(tx)
 
+	//cek permission
+
 	goodEmail := strings.ToLower(request.Email)
 
-	user, err := service.UserRepository.FindByEmail(ctx, service.Chache, tx, goodEmail)
-	helper.PanicIfError(err)
-	exception.PanicIfNotFound(user.Id)
+	var user domain.User
+
+	key := "userbyemail" + request.Email
+	user, err = service.UserChache.Get(ctx, key)
+	if err == redis.Nil {
+		user, err = service.UserRepository.FindByEmail(ctx, tx, goodEmail)
+		helper.PanicIfError(err)
+		exception.PanicIfNotFound(user.Id)
+	}
 
 	if user.IsActive == true {
 		panic(exception.NewWrongOtpError(errors.New("this user is already active")))
 	}
 
+	var otp domain.OTP
+
 	stringOtp := helper.GenerateOtp()
 
-	otp := domain.OTP{
+	otp = domain.OTP{
 		Email: goodEmail,
 		OTP:   stringOtp,
 	}
 
 	go helper.SendOtp(otp, service.Smtp)
-
-	service.UserRepository.SetOTp(ctx, service.Chache, otp)
+	go service.UserChache.SetOtp(ctx, otp)
 
 	response := client.UserGetNewOtpResponse{
 		Email: goodEmail,
 		Msg:   "OTP sent successfully, check your email",
 	}
+
+	//set permission wait 5 menit
 
 	return response
 }

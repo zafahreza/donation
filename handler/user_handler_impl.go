@@ -2,7 +2,7 @@ package handler
 
 import (
 	"donation/entity/client"
-	"donation/helper.go"
+	"donation/helper"
 	"donation/middleware"
 	"donation/service"
 	"net/http"

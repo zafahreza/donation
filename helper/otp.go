@@ -1,10 +1,12 @@
 package helper
 
 import (
+	"bytes"
 	"crypto/rand"
 	"donation/entity/domain"
 	"fmt"
 	mail "github.com/xhit/go-simple-mail/v2"
+	template2 "html/template"
 	"io"
 )
 
@@ -22,15 +24,25 @@ func GenerateOtp() string {
 	return string(b)
 }
 
+func template(otp domain.OTP) bytes.Buffer {
+	var body bytes.Buffer
+	t := template2.Must(template2.ParseFiles("helper/template/template.html"))
+	t.Execute(&body, domain.OTP{
+		OTP: otp.OTP,
+	})
+
+	return body
+}
+
 func SendOtp(otp domain.OTP, smtp *mail.SMTPClient) {
 
-	body := "Please input Your Verification Code: " + otp.OTP + " to complete registration"
+	body := template(otp)
 
 	email := mail.NewMSG()
 	email.SetFrom("Donation Website <fahrezaspam@gmail.com>")
 	email.AddTo(otp.Email)
 	email.SetSubject("Verification Code")
-	email.SetBody(mail.TextPlain, body)
+	email.SetBody(mail.TextHTML, string(body.Bytes()))
 	err := email.Send(smtp)
 	PanicIfError(err)
 

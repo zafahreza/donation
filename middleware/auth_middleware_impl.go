@@ -4,7 +4,6 @@ import (
 	"donation/entity/domain"
 	"donation/exception"
 	"errors"
-	"fmt"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/joho/godotenv"
 	"log"
@@ -76,13 +75,11 @@ func (authMiddleware *AuthMiddlewareImpl) ValidateToken(r *http.Request) int {
 
 	if claim, ok := token.Claims.(*domain.JwtClaim); ok && token.Valid {
 		userId := claim.UserId
-		fmt.Println(userId)
 
 		return userId
 	}
 
 	jwtError, _ := err.(*jwt.ValidationError)
-	fmt.Println(jwtError)
 	if jwtError.Errors == jwt.ValidationErrorExpired {
 		panic(exception.NewUnauthorizedError(errors.New("token expired, please login")))
 	}

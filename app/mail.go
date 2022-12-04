@@ -1,7 +1,7 @@
 package app
 
 import (
-	"donation/helper.go"
+	"donation/helper"
 	"github.com/joho/godotenv"
 	mail "github.com/xhit/go-simple-mail/v2"
 	"os"
