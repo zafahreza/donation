@@ -20,7 +20,7 @@ func NewAuthMiddleware() AuthMidleware {
 	return &AuthMiddlewareImpl{}
 }
 func loadSecretKey() []byte {
-	err := godotenv.Load("jwt.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatal("gagal load env")
 	}

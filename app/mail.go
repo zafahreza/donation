@@ -9,7 +9,7 @@ import (
 )
 
 func NewSmtpClient() *mail.SMTPClient {
-	err := godotenv.Load("mail.env")
+	err := godotenv.Load(".env")
 	helper.PanicIfError(err)
 
 	username := os.Getenv("SMTP_NAME")
